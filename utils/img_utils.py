@@ -11,23 +11,23 @@ def canny_process(image_path, threshold1, threshold2):
     img = img.convert("RGBA")
 
     canvas_image = Image.new('RGBA', img.size, (255, 255, 255, 255))
-    
+
     # 画像をキャンバスにペーストし、透過部分が白色になるように設定
     canvas_image.paste(img, (0, 0), img)
 
     # RGBAからRGBに変換し、透過部分を白色にする
     image_pil = canvas_image.convert("RGB")
     image_np = np.array(image_pil)
-    
+
     # グレースケール変換
     gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
     # Cannyエッジ検出
     edges = cv2.Canny(gray, threshold1, threshold2)
-    
+
     canny = Image.fromarray(edges)
-    
-    
+
     return canny
+
 
 def invert_process(image_path):
     # 画像を開き、RGBA形式に変換して透過情報を保持
@@ -35,7 +35,7 @@ def invert_process(image_path):
     img = img.convert("RGBA")
 
     canvas_image = Image.new('RGBA', img.size, (255, 255, 255, 255))
-    
+
     # 画像をキャンバスにペーストし、透過部分が白色になるように設定
     canvas_image.paste(img, (0, 0), img)
 
@@ -44,7 +44,7 @@ def invert_process(image_path):
 
     # image_pilを白黒反転する
     invert = ImageOps.invert(image_pil)
-    
+
     return invert
 
 
@@ -54,12 +54,12 @@ def mask_process(image_path):
     img_rgba = img.convert("RGBA")
     canvas = Image.new("RGBA", img_rgba.size, (255, 255, 255, 255))  # 白背景のキャンバスを作成
     img_with_background = Image.alpha_composite(canvas, img_rgba)
-    
+
     # OpenCVが扱える形式に変換
     img_with_background = cv2.cvtColor(np.array(img_with_background), cv2.COLOR_RGBA2BGR)
     img = cv2.bitwise_not(img_with_background)
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
+
     ret, img_binary = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(img_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour = max(contours, key=lambda x: cv2.contourArea(x))
@@ -68,17 +68,18 @@ def mask_process(image_path):
     mask = Image.fromarray(mask)
     return mask
 
+
 def multiply_images(line_pil, shadow_pil):
     # 画像のモードを確認し、必要に応じてRGBAに変換
     if line_pil.mode != 'RGBA':
         line_pil = line_pil.convert('RGBA')
     if shadow_pil.mode != 'RGBA':
         shadow_pil = shadow_pil.convert('RGBA')
-    
+
     # 画像のサイズを確認し、異なる場合はエラーを投げる
     if line_pil.size != shadow_pil.size:
         raise ValueError("Images must have the same dimensions")
-    
+
     # 乗算処理を行う
     result_image = Image.new('RGBA', line_pil.size)
     for x in range(line_pil.width):
@@ -91,8 +92,9 @@ def multiply_images(line_pil, shadow_pil):
             b = (pixel_line[2] * pixel_shadow[2]) // 255
             a = (pixel_line[3] * pixel_shadow[3]) // 255
             result_image.putpixel((x, y), (r, g, b, a))
-    
+
     return result_image
+
 
 def resize_image_aspect_ratio(image):
     # 元の画像サイズを取得
@@ -104,16 +106,16 @@ def resize_image_aspect_ratio(image):
     # 標準のアスペクト比サイズを定義
     sizes = {
         1: (1024, 1024),  # 正方形
-        4/3: (1152, 896),  # 横長画像
-        3/2: (1216, 832),
-        16/9: (1344, 768),
-        21/9: (1568, 672),
-        3/1: (1728, 576),
-        1/4: (512, 2048),  # 縦長画像
-        1/3: (576, 1728),
-        9/16: (768, 1344),
-        2/3: (832, 1216),
-        3/4: (896, 1152)
+        4 / 3: (1152, 896),  # 横長画像
+        3 / 2: (1216, 832),
+        16 / 9: (1344, 768),
+        21 / 9: (1568, 672),
+        3 / 1: (1728, 576),
+        1 / 4: (512, 2048),  # 縦長画像
+        1 / 3: (576, 1728),
+        9 / 16: (768, 1344),
+        2 / 3: (832, 1216),
+        3 / 4: (896, 1152)
     }
 
     # 最も近いアスペクト比を見つける
@@ -125,8 +127,9 @@ def resize_image_aspect_ratio(image):
 
     return resized_image
 
+
 def base_generation(size, color):
-    canvas = Image.new("RGBA", size, color) 
+    canvas = Image.new("RGBA", size, color)
     return canvas
 
 
@@ -140,6 +143,7 @@ def make_base_pil(image_path):
     base_pil = resize_image_aspect_ratio(white_bg).convert("RGB")
     return base_pil
 
+
 def noline_process(input_image_path):
     def get_major_colors(image, threshold_percentage):
         if image.mode != 'RGB':
@@ -148,10 +152,11 @@ def noline_process(input_image_path):
         for pixel in image.getdata():
             color_count[pixel] += 1
         total_pixels = image.width * image.height
-        return [(color, count) for color, count in color_count.items() if (count / total_pixels) >= threshold_percentage]
+        return [(color, count) for color, count in color_count.items() if
+                (count / total_pixels) >= threshold_percentage]
 
     def consolidate_colors(major_colors, threshold):
-        colors_lab = [rgb2lab(np.array([[color]], dtype=np.float32)/255.0).reshape(3) for color, _ in major_colors]
+        colors_lab = [rgb2lab(np.array([[color]], dtype=np.float32) / 255.0).reshape(3) for color, _ in major_colors]
         i = 0
         while i < len(colors_lab):
             j = i + 1
@@ -171,12 +176,14 @@ def noline_process(input_image_path):
         return major_colors
 
     def generate_distant_colors(consolidated_colors, distance_threshold):
-        consolidated_lab = [rgb2lab(np.array([color], dtype=np.float32) / 255.0).reshape(3) for color, _ in consolidated_colors]
+        consolidated_lab = [rgb2lab(np.array([color], dtype=np.float32) / 255.0).reshape(3) for color, _ in
+                            consolidated_colors]
         max_attempts = 10000
         for _ in range(max_attempts):
             random_rgb = np.random.randint(0, 256, size=3)
             random_lab = rgb2lab(np.array([random_rgb], dtype=np.float32) / 255.0).reshape(3)
-            if all(deltaE_ciede2000(base_color_lab, random_lab) > distance_threshold for base_color_lab in consolidated_lab):
+            if all(deltaE_ciede2000(base_color_lab, random_lab) > distance_threshold for base_color_lab in
+                   consolidated_lab):
                 return tuple(random_rgb)
         return (128, 128, 128)
 
@@ -199,8 +206,10 @@ def noline_process(input_image_path):
             for i in range(len(data)):
                 if matches[i]:
                     x, y = divmod(i, original_shape[1])
-                    neighbors = [(x, y-1), (x, y+1), (x-1, y), (x+1, y)]
-                    valid_neighbors = [data[nx * original_shape[1] + ny, :3] for nx, ny in neighbors if 0 <= nx < original_shape[0] and 0 <= ny < original_shape[1] and not matches[nx * original_shape[1] + ny]]
+                    neighbors = [(x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y)]
+                    valid_neighbors = [data[nx * original_shape[1] + ny, :3] for nx, ny in neighbors if
+                                       0 <= nx < original_shape[0] and 0 <= ny < original_shape[1] and not matches[
+                                           nx * original_shape[1] + ny]]
                     if valid_neighbors:
                         new_color = np.mean(valid_neighbors, axis=0).astype(np.uint8)
                         data[i, :3] = new_color
@@ -236,14 +245,13 @@ def noline_process(input_image_path):
         _, binarized = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return binarized
 
-
     def process_XDoG(image_path):
-        kernel_size=0
-        sigma=1.4
-        k_sigma=1.6
-        epsilon=0
-        phi=10
-        gamma=0.98
+        kernel_size = 0
+        sigma = 1.4
+        k_sigma = 1.6
+        epsilon = 0
+        phi = 10
+        gamma = 0.98
 
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         xdog_image = XDoG_filter(image, kernel_size, sigma, k_sigma, epsilon, phi, gamma)
@@ -265,3 +273,55 @@ def noline_process(input_image_path):
     filled_image = line_color(rgb_image, mask, new_color_1)
     replace_color_image = replace_color(filled_image, new_color_1, 2).convert('RGB')
     return replace_color_image
+
+
+def transparent_process(image_path, threshold):
+    threshold_value = int(threshold) * 255 // 100
+
+    image_gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    _, mask = cv2.threshold(image_gray, threshold_value, 255, cv2.THRESH_BINARY)
+
+    mask = cv2.bitwise_not(mask)
+
+    cv2.imwrite('mask.png', mask)
+
+    image = cv2.imread(image_path)
+
+    b, g, r = cv2.split(image)
+
+    a = mask
+    output = cv2.merge((b, g, r, a))
+
+    output_pil = Image.fromarray(output)
+
+    return output_pil
+
+
+def positive_negative_shape_process(image_path, thresholds, colors):
+    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGRA)
+    elif len(image.shape) == 3:
+        if image.shape[2] == 3:
+            alpha_channel = np.ones(image.shape[:2], dtype=image.dtype) * 255
+            image = cv2.merge((image, alpha_channel))
+
+    alpha_channel = image[:, :, 3]
+
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    color_image = np.zeros_like(image)
+
+    color_image[gray < thresholds[0]] = np.array([0, 0, 0, 0])
+    color_image[gray > thresholds[-1]] = np.array([0, 0, 0, 0])
+
+    for i, (low, high) in enumerate(zip(thresholds[:-1], thresholds[1:])):
+        if i < len(colors):
+            color = np.array([colors[i], colors[i], colors[i], 255])
+            color_image[(gray >= low) & (gray < high)] = color
+
+    output_pil = Image.fromarray(color_image)
+
+    return output_pil
